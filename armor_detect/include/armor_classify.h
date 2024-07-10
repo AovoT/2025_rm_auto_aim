@@ -10,7 +10,6 @@
 #include "armor_detect.h"
 
 namespace armor_auto_aim {
-
 struct ClassifyInfo {
     std::string model_path;
     std::string infer_place;
@@ -26,7 +25,6 @@ public:
     void startClassify(std::vector<Armor> &armors);
 
     void handleData(Armor &armors);
-
 private:
     float m_confidence;
     std::shared_ptr<ov::Model> m_model;
