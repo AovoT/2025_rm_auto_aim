@@ -7,7 +7,7 @@
 
 #include <openvino/openvino.hpp>
 
-#include <armor_detect.h>
+#include "armor_detect.h"
 
 namespace armor_auto_aim {
 
@@ -18,7 +18,6 @@ struct ClassifyInfo {
 };
 
 class ArmorNumberClassify {
-    
 public:
     ArmorNumberClassify() = default;
 
@@ -28,17 +27,11 @@ public:
 
     void handleData(Armor &armors);
 
-
 private:
     float m_confidence;
     std::shared_ptr<ov::Model> m_model;
     ov::CompiledModel m_network;
     ov::InferRequest m_infer_request;
-
-
-
 };
 } // namespace armor_auto_aim
-
-
 #endif

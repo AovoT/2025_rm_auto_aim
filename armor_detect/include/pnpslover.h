@@ -14,7 +14,6 @@
 #include <armor_detect.h>
 
 namespace armor_auto_aim {
-
 class ArmorPnpSlover {
 public:
     ArmorPnpSlover() = default;
@@ -26,7 +25,6 @@ public:
     geometry_msgs::msg::Quaternion orientationFromRvec(const cv::Mat& r_vec);
 
     float computeArmorToCenter(const cv::Point2f &center);
-    
 private:
     static constexpr float LARGE_ARMOR_WIDTH = 130.4;
     static constexpr float LARGE_ARMOR_HEIGHT = 55;

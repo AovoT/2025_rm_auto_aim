@@ -1,17 +1,11 @@
 #include <armor_classify.h>
 
 namespace armor_auto_aim {
-
 ArmorNumberClassify::ArmorNumberClassify(const ClassifyInfo &info) {
-    
     ov::Core ie;
-
     m_model = ie.read_model(info.model_path);
-
     m_network = ie.compile_model(m_model, info.infer_place);
-
     m_infer_request = m_network.create_infer_request();
-
     std::cout << "Model inputs:\n";
     for (const auto& input : m_model->inputs()) {
         std::cout << input.get_any_name() << ": " << input.get_shape() << " - " << input.get_element_type() << "\n";
@@ -31,7 +25,6 @@ void ArmorNumberClassify::startClassify(std::vector<Armor> &armors) {
         armor.number_image.convertTo(wait_infer_image,CV_32F);
         ov::element::Type type = m_model->input().get_element_type();
         ov::Shape shape = m_model->input().get_shape();
-        
         wait_infer_image = wait_infer_image / 255.0;
         ov::Tensor input_tensor(type, shape);
         std::memcpy(input_tensor.data(), wait_infer_image.data, input_tensor.get_byte_size());
@@ -46,7 +39,6 @@ void ArmorNumberClassify::handleData(Armor &armor) {
     auto output_data = output_tensor.data<float>();
     float *end_ptr = output_data + 5;
     float max_prob = *std::max_element(output_data, end_ptr);
-
     std::vector<float> exp_output(5);
     std::transform(output_data, end_ptr, exp_output.begin(), [max_prob](float val) {
         return exp(val - max_prob);

@@ -2,7 +2,6 @@
 
 
 namespace armor_auto_aim {
-
 ArmorPnpSlover::ArmorPnpSlover(const std::array<double, 9>& intrinsic_matrix,
                                const std::vector<double>& distortion_vector) 
                                : m_intrinsic_matrix(cv::Mat(3, 3, CV_64F, const_cast<double*>(intrinsic_matrix.data())).clone()),
@@ -68,8 +67,6 @@ geometry_msgs::msg::Quaternion ArmorPnpSlover::orientationFromRvec(const cv::Mat
     tf2_rotation_matrix.getRotation(tf2_q);
     return tf2::toMsg(tf2_q);
 }
-
-
 } // namespace armor_auto_aim
 
 

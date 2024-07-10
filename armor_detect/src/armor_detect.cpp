@@ -1,7 +1,6 @@
 #include <armor_detect.h>
 
 namespace armor_auto_aim {
-
 ArmorDetect::ArmorDetect(const AllThresold &all_thresold) : m_all_thresold(all_thresold) {}
 
 // ArmorDetect::~ArmorDetect() = default;
@@ -262,7 +261,4 @@ void ArmorDetect::armorClassifySmallLarge() {
         }
     }
 }
-
-
-
 } // namespace armor_auto_aim

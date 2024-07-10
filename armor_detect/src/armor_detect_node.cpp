@@ -245,8 +245,6 @@ namespace armor_auto_aim {
         // RCLCPP_INFO(this->get_logger(), "阈值更新成功");
         m_armor_detector.updateAllThresold(m_declare_all_thresold);
 }
-
-
 } // namespace armor_auto_aim
 
 #include <rclcpp_components/register_node_macro.hpp>

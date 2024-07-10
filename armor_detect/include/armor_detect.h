@@ -12,7 +12,6 @@
 
 
 namespace armor_auto_aim {
-
 struct AllThresold {
     //处理方式
     std::string process_way; // hsv or rgb;
@@ -81,8 +80,6 @@ struct Armor {
     cv::Mat number_image = cv::Mat();
 };
 
-
-
 class ArmorDetect {
 public:
     ArmorDetect(const AllThresold &all_thresold);
@@ -95,20 +92,19 @@ public:
     void armorClassifySmallLarge();
     void cropArmorNumber(const cv::Mat &image); //  裁取标准装甲板
     void inferenceArmorNumber();
-    
     std::vector<Armor> getArmors(); // 获取装甲板
+    void drawArmor(const cv::Mat &image);
+    void updateArmors(const std::vector<Armor> &armors);
+    
+    //更新参数函数
+    void updateAllThresold(const AllThresold &all_thresold);
+private:
     //  辅助函数
     bool judgeIfRelLight(const Light &demo_light); // 判断是否为真正的灯条
     bool judgeIfRelArmor(const Armor &armor); // 判断是否为装甲板
     Light processLight(const cv::RotatedRect & rotated_rect); // 生成灯条
     Armor processArmor(const Light &left_light, const Light &right_light); // 生成装甲板
-    void drawArmor(const cv::Mat &image);
-    
-    void updateArmors(const std::vector<Armor> &armors);
 
-    //更新参数函数
-    void updateAllThresold(const AllThresold &all_thresold);
-private:
     AllThresold m_all_thresold;
     std::vector<Armor> m_armors; 
 };
