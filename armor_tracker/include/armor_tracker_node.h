@@ -16,11 +16,21 @@
 #include <std_msgs/msg/float64.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 
+#include <armor_interfaces/msg/armor.hpp>
+#include <armor_interfaces/msg/armors.hpp>
+
 namespace armor_auto_aim {
 class ArmorTrackerNode : public rclcpp::Node {
 public:
     ArmorTrackerNode(const rclcpp::NodeOptions &options);
     void declareParameters();
+
+    void subarmorCallback(const armor_interfaces::msg::Armors &armors);
+    
+private:
+    rclcpp::Subscription<armor_interfaces::msg::Armors>::SharedPtr m_armors_sub;
+
+
 };
 } // namespace armor_auto_aim
 #endif // ARMOR_TRACKER_NODE_
