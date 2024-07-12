@@ -2,7 +2,7 @@
 
 ## 开发步骤
 
-先克隆到本地仓库 `git clone git@github.com:AovoT/2025_rm_auto_aim.git`cd到本地仓库下执行下面命令
+先克隆到本地仓库 `git clone https://github.com/AovoT/2025_rm_auto_aim.git`cd到本地仓库下执行下面命令
 
 ```shell
 #切换到dev
