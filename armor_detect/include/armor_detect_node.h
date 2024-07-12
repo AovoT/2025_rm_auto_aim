@@ -14,7 +14,6 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <armor_interfaces/msg/armor.hpp>
 #include <armor_interfaces/msg/armors.hpp>
-
 #include <opencv2/opencv.hpp>
 
 #include "armor_detect.h"
