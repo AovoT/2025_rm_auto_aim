@@ -12,7 +12,7 @@ using GetMatrixVoidInputFunction = std::function<Eigen::MatrixXd()>; // 不用�
 
 public:
     ExtenedKalmanFilter(const StateTransformFunction f, const StateTransformFunction h,
-                        const GetMatrixFunction jacobian_f, const GetMatrixFunction jacobian_h,
+                        const GetMatrixVoidInputFunction jacobian_f, const GetMatrixFunction jacobian_h,
                         const GetMatrixVoidInputFunction update_Q, const GetMatrixFunction update_R, double dt);
     void updateDt(double dt) {m_dt = dt;}
 
@@ -22,7 +22,7 @@ public:
 private:
     StateTransformFunction m_f;
     StateTransformFunction m_h;
-    GetMatrixFunction m_jacobian_f;
+    GetMatrixVoidInputFunction m_jacobian_f;
     GetMatrixFunction m_jacobian_h;
     GetMatrixVoidInputFunction m_update_Q;
     GetMatrixFunction m_update_R;
