@@ -6,6 +6,8 @@
 #include <string>
 #include <fstream>
 
+#include <eigen3/Eigen/Core>
+
 // ROS2
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/buffer.h>
@@ -19,6 +21,8 @@
 #include <armor_interfaces/msg/armor.hpp>
 #include <armor_interfaces/msg/armors.hpp>
 
+#include "kalman_filter.h"
+
 namespace armor_auto_aim {
 class ArmorTrackerNode : public rclcpp::Node {
 public:
@@ -26,9 +30,18 @@ public:
     void declareParameters();
 
     void subarmorCallback(const armor_interfaces::msg::Armors &armors);
+
+    void initExtentedKalman();
+
+    void initTracker();
     
 private:
     rclcpp::Subscription<armor_interfaces::msg::Armors>::SharedPtr m_armors_sub;
+
+    float m_dt;
+
+    std::shared_ptr<ExtenedKalmanFilter> m_ekf = nullptr;
+
 
 
 };
