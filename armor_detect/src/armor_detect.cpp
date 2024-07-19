@@ -9,6 +9,13 @@ ArmorDetect::ArmorDetect(const AllThresold &all_thresold) : m_all_thresold(all_t
 cv::Mat ArmorDetect::preprocessImage(const cv::Mat &image) {
     // rgb和hsv两种处理方式
     cv::Mat processed_image;
+    if (m_all_thresold.process_way == "gray") {
+        cv::cvtColor(image, processed_image, cv::COLOR_BGR2GRAY);
+        cv::threshold(processed_image, processed_image, m_all_thresold.gray_thresold, 255, 0);
+        cv::Mat kernel = cv::getStructuringElement(2, cv::Size(3, 3));
+        cv::morphologyEx(processed_image, processed_image ,1,kernel,cv::Point(-1,-1),m_all_thresold.morphologyex_times);
+
+    }
     if (m_all_thresold.process_way == "rgb") {
         cv::Mat gray_image, rgb_image;
         std::vector<cv::Mat> split_image;

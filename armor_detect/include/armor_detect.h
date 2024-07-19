@@ -14,7 +14,7 @@
 namespace armor_auto_aim {
 struct AllThresold {
     //处理方式
-    std::string process_way; // hsv or rgb;
+    std::string process_way; // hsv or rgb or gray;
     //侦查颜色
     std::string detect_color;
     // hsv预处理阈值
