@@ -133,7 +133,7 @@ Light ArmorDetect::processLight(const cv::RotatedRect &rotated_rect) {
         light.angle = rotated_rect.angle;
     }
     std::vector<cv::Point2f> points;
-    rotated_rect.points(points);    
+    rotated_rect.points(points.data());    
     light.length = std::min(rotated_rect.size.height,rotated_rect.size.width);
     light.width = std::max(rotated_rect.size.height,rotated_rect.size.width);
     light.lenght_width_ratio = light.length / light.width;

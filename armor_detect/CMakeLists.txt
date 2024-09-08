@@ -11,13 +11,12 @@ endif()
 message("-- CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_PREFIX_PATH /opt/ros/humble/share/cv_bridge/cmake)
+set(CMAKE_PREFIX_PATH /usr/local/runtime/cmake)
 find_package(ament_cmake_auto REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(OpenVINO REQUIRED) # 必须放在find_package(InferenceEngine REQUIRED)find_package(ngraph REQUIRED)前面
-find_package(InferenceEngine REQUIRED)
-find_package(ngraph REQUIRED)
 
 
 ament_auto_find_build_dependencies()
@@ -30,13 +29,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenVINO_INCLUDE_DIRS})
-target_include_directories(${PROJECT_NAME} PUBLIC ${ngraph_INCLUDE_DIRS})
-target_include_directories(${PROJECT_NAME} PUBLIC ${Eigen3_INCLUDE_DIRS})
 
 target_link_libraries(${PROJECT_NAME} 
     ${OpenCV_LIBS}
     Eigen3::Eigen
-    ${OpenVINO_LIBRARIES}
+    openvino::runtime
     ${InferenceEngine_LIBRARIES}
     ${ngraph_LIBRARIES}
     ${armor_interfaces_LIBRARIES})
