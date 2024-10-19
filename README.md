@@ -22,3 +22,17 @@ git push origin feature/your-feature-name
 ```
 
 然后进入仓库页面创建PR就可以
+
+##
+相机坐标系 镜头对着的方向为z  右边为x  下边为y
+世界坐标系 看向装甲板的的方向为z  右边为x  下边为y
+
+## 检查坐标变换
+ros2 run tf2_ros tf2_echo imu_frame camera_frame
+ros2 run tf2_ros tf2_echo odom_frame imu_frame 
+
+
+
+
+## 上位机下位机通信流程
+![RUNOOB 图标](./images/Untitled diagram-2024-09-10-072612.png)

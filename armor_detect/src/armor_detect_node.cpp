@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 #include <filesystem>
+#include <thread>
 
 // 3rdlibs
 #include <opencv2/highgui.hpp>
@@ -25,27 +26,95 @@ namespace armor_auto_aim {
     ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions &options) : Node("armor_detector", options) {
         RCLCPP_INFO(this->get_logger(), "ArmorDetectorNode Constructor");
         declareParams();
-        m_img_sub = this->create_subscription<sensor_msgs::msg::Image>(
-            "image_raw", rclcpp::SensorDataQoS(),
-            std::bind(&ArmorDetectorNode::subImageCallback, this, std::placeholders::_1)
-        );
-
-        m_cam_info_sub = this->create_subscription<
-            sensor_msgs::msg::CameraInfo>("camera_info", rclcpp::SensorDataQoS(),
-            std::bind(&ArmorDetectorNode::subCamInfoCallback, this, std::placeholders::_1));
-
+        HKCameraNode::CameraInfo camera_info = HKCameraNode::getInstance().getCameraInfo("/home/myq/Desktop/my_code/auto_aim/2025_rm_auto_aim/config/old.yaml");
+        if (!(camera_info.distortion_vector.empty() && camera_info.intrinsic_matrix.empty())) {
+            m_armor_pnp_slover = ArmorPnpSlover(camera_info.intrinsic_matrix, camera_info.distortion_vector);
+            RCLCPP_INFO(this->get_logger(), "pnp init successfully");
+        } else {
+            RCLCPP_INFO(this->get_logger(), "pnp init error");
+        }
         m_armors_publish = this->create_publisher<armor_interfaces::msg::Armors>("armor_detector/armors", rclcpp::SensorDataQoS());
-
         // 绑定参数更改回调函数
         m_parameter_event_handler = this->add_on_set_parameters_callback(std::bind(&ArmorDetectorNode::paramChangedCallback, this, std::placeholders::_1));
-
         m_armor_detector = ArmorDetect(m_declare_all_thresold);
         m_armor_classify = ArmorNumberClassify(m_classify_info);
         RCLCPP_INFO(this->get_logger(), "ArmorDetectorNode Initialized");
+        m_detect_core = std::thread([this]()->void {
+            this->startDetect();
+        });
+    }
+
+    void ArmorDetectorNode::startDetect() {
+        std::cout << "Starting detection..." << std::endl; // 调试信息
+        while (true) {
+            auto start = std::chrono::high_resolution_clock::now();
+            updateThresold();
+            cv::Mat img = HKCameraNode::getInstance().getImage();
+            m_armors.armors.clear();
+            m_armors.header.frame_id = "camera_frame";
+            m_armors.header.stamp = this->now();
+            cv::cvtColor(img, img, cv::COLOR_RGB2BGR);
+            if (img.empty()) {
+                std::cout << "Received empty image, exiting..." << std::endl; // 调试信息
+                return;
+            }
+            // cv::imshow("receive_image", img);
+            // cv::waitKey(1); // 添加延时，以便显示图像
+            m_armor_detector.startDetect(img);
+            std::vector<Armor> armors = m_armor_detector.getArmors();
+            if (!armors.empty()) {
+                m_armor_classify.startClassify(armors);
+            }
+            m_armor_detector.updateArmors(armors);
+            m_armor_detector.drawArmor(img);
+            armor_interfaces::msg::Armor armor_msg;
+            
+            for (auto &armor : armors) {
+                cv::Mat r_vec, t_vec;
+                armor.ifsmall = true;
+                if (m_armor_pnp_slover.pnpSlove(armor, r_vec, t_vec)) {
+                    armor_msg.type = "SMALL";
+                    armor_msg.color = this->get_parameter("detect_color").as_string();
+                    armor_msg.number = armor.number_class;
+                    armor_msg.distance_to_center = m_armor_pnp_slover.computeArmorToCenter(armor.center);
+                    armor_msg.pose.position.x = t_vec.at<double>(0); 
+                    armor_msg.pose.position.y = t_vec.at<double>(1); 
+                    armor_msg.pose.position.z = t_vec.at<double>(2); 
+                    for (int i = 0; i < t_vec.rows; ++i) {
+                        for (int j = 0; j < t_vec.cols; ++j) {
+                            std::cout << t_vec.ptr<double>(i)[j] << std::endl;
+                        }
+                    }
+
+                    if (!t_vec.empty()) {
+                        std::cout << "distance" << armor_msg.distance_to_center << "x :" << t_vec.at<double>(0)  << " y :" << t_vec.at<double>(1) <<  " z :"<<  t_vec.at<double>(2) << std::endl;
+                    }
+                    armor_msg.pose.orientation = m_armor_pnp_slover.orientationFromRvec(r_vec);
+                    m_armors.armors.push_back(armor_msg);
+                }
+            }
+            m_armors_publish->publish(m_armors);
+            // 记录帧处理结束的时间
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> frame_time = end - start;
+
+            // 计算帧率
+            double fps = 1.0 / frame_time.count();
+            
+            // 将帧率转换为字符串
+            std::string fps_text = "FPS: " + std::to_string(static_cast<int>(fps));
+
+            // 将FPS绘制到图像上
+            cv::putText(img, fps_text, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 0, 0), 2);
+
+            // 显示图像
+            cv::imshow("receive_image", img);
+            cv::waitKey(1); // 添加延时，以便显示图像
+        }
+
     }
 
     void ArmorDetectorNode::declareParams() {
-        
         rcl_interfaces::msg::ParameterDescriptor desc;
         desc.description = "Parameter range";
         rcl_interfaces::msg::IntegerRange range;
@@ -53,15 +122,14 @@ namespace armor_auto_aim {
         range.to_value = 255;
         range.step = 1;
         desc.integer_range.push_back(range);
-
         RCLCPP_INFO(this->get_logger(), "Declaring Parameters");
         //声明数字分类中的各种信息
-        m_classify_info.model_path = this->declare_parameter("model_path", "/home/mayuqi/Desktop/2025_rm_auto_aim/src/armor_detect/model/mlp.onnx");
+        m_classify_info.model_path = this->declare_parameter("model_path", "/home/myq/Desktop/my_code/auto_aim/2025_rm_auto_aim/armor_detect/model/mlp.onnx");
         m_classify_info.infer_place = this->declare_parameter("infer_place", "CPU");
         m_classify_info.confidence = this->declare_parameter<int>("confidence", 0.3);
 
         // 声明在传统视觉识别装甲板中的各种阈值
-        m_declare_all_thresold.process_way = this->declare_parameter("process_way", "rgb");
+        m_declare_all_thresold.process_way = this->declare_parameter("process_way", "gray");
         // 图像处理阈值
         m_declare_all_thresold.h_up = this->declare_parameter<int>("h_up", 0, desc);
         m_declare_all_thresold.s_up = this->declare_parameter<int>("s_up", 0, desc);
@@ -71,7 +139,7 @@ namespace armor_auto_aim {
         m_declare_all_thresold.v_lower = this->declare_parameter<int>("v_lower", 0, desc);
         m_declare_all_thresold.gray_thresold = this->declare_parameter<int>("gray_thresold", 163, desc);
         m_declare_all_thresold.rgb_thresold = this->declare_parameter<int>("rgb_thresold", 45, desc);
-        m_declare_all_thresold.detect_color = this->declare_parameter("detect_color", "BLUE");
+        m_declare_all_thresold.detect_color = this->declare_parameter("detect_color", "RED");
         m_declare_all_thresold.morphologyex_times = this->declare_parameter("morphologyex_times", 3);
         
         // 筛选灯条阈值
@@ -116,42 +184,19 @@ namespace armor_auto_aim {
 
     void ArmorDetectorNode::subCamInfoCallback(const sensor_msgs::msg::CameraInfo::ConstSharedPtr cam_info) {
         m_armor_pnp_slover = ArmorPnpSlover(cam_info->k, cam_info->d);
-        m_cam_info_sub.reset();
+        // m_cam_info_sub.reset();
     }
 
     void ArmorDetectorNode::subImageCallback(const sensor_msgs::msg::Image::ConstSharedPtr img_msg) {
-        updateThresold();
         // 图像处理代码
         cv::Mat img = cv_bridge::toCvShare(img_msg, "rgb8")->image;
         if (img.empty())
             return;
-        auto s = this->now();
-        m_armor_detector.startDetect(img);
-
-        std::vector<Armor> armors = m_armor_detector.getArmors();
-        if (!armors.empty()) {
-            m_armor_classify.startClassify(armors);
-
-        }
-        m_armor_detector.updateArmors(armors);
-        m_armor_detector.drawArmor(img);
-        armor_interfaces::msg::Armor armor_msg;
-        for (const auto &armor : armors) {
-            cv::Mat r_vec, t_vec;
-            if (m_armor_pnp_slover.pnpSlove(armor, r_vec, t_vec)) {
-                armor_msg.color = this->get_parameter("detect_color").as_string();
-                armor_msg.number = armor.number_class;
-                armor_msg.distance_to_center = m_armor_pnp_slover.computeArmorToCenter(armor.center);
-                armor_msg.pose.position.x = t_vec.at<double>(0); 
-                armor_msg.pose.position.y = t_vec.at<double>(1); 
-                armor_msg.pose.position.z = t_vec.at<double>(2); 
-                armor_msg.pose.orientation = m_armor_pnp_slover.orientationFromRvec(r_vec);
-                m_armors.armors.push_back(armor_msg);
-            }
-        }
-        m_armors_publish->publish(m_armors); 
+        cv::imshow("receive_image", img);
+        cv::waitKey(1);
+        // auto s = this->now();
+        // m_armors_publish->publish(m_armors); 
     }
-
     rcl_interfaces::msg::SetParametersResult ArmorDetectorNode::paramChangedCallback(const std::vector<rclcpp::Parameter> &parameters) {
         rcl_interfaces::msg::SetParametersResult result;
         result.successful = true;

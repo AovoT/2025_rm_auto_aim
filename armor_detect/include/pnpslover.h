@@ -26,10 +26,13 @@ public:
 
     float computeArmorToCenter(const cv::Point2f &center);
 private:
-    static constexpr float LARGE_ARMOR_WIDTH = 130.4;
+// mm
+    static constexpr float LARGE_ARMOR_WIDTH = 225.7;
     static constexpr float LARGE_ARMOR_HEIGHT = 55;
-    static constexpr float SMALL_ARMOR_WIDTH = 225.7;
+    static constexpr float SMALL_ARMOR_WIDTH = 130.4;
     static constexpr float SMALL_ARMOR_HEIGHT = 55;
+    // static constexpr float SMALL_ARMOR_WIDTH = 0;
+    // static constexpr float SMALL_ARMOR_HEIGHT = 0;
     cv::Mat m_rvec;
     cv::Mat m_tvec;
     cv::Mat m_intrinsic_matrix;

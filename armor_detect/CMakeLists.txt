@@ -17,9 +17,10 @@ find_package(Threads REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(OpenVINO REQUIRED) # 必须放在find_package(InferenceEngine REQUIRED)find_package(ngraph REQUIRED)前面
-
+# find_package(hik_camera REQUIRED) 
 
 ament_auto_find_build_dependencies()
+
 
 # 此命令只需要包含.cpp文件会自动在相应目录结构下寻找头文件
 ament_auto_add_library(${PROJECT_NAME} SHARED  
@@ -30,13 +31,15 @@ target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME} PUBLIC ${OpenVINO_INCLUDE_DIRS})
 
+ament_target_dependencies(${PROJECT_NAME}
+  # hik_camera
+  rclcpp
+  OpenCV
+)
 target_link_libraries(${PROJECT_NAME} 
     ${OpenCV_LIBS}
     Eigen3::Eigen
-    openvino::runtime
-    ${InferenceEngine_LIBRARIES}
-    ${ngraph_LIBRARIES}
-    ${armor_interfaces_LIBRARIES})
+    openvino::runtime)
     
 
 rclcpp_components_register_node(${PROJECT_NAME}

@@ -30,20 +30,22 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${Eigen3_INCLUDE_DIRS})
 
 target_link_libraries(${PROJECT_NAME} 
     ${OpenCV_LIBS}
-    Eigen3::Eigen
     ${OpenVINO_LIBRARIES}
-    ${armor_interfaces_LIBRARIES})
-    
+    ${armor_interfaces_LIBRARIES}
+    yaml-cpp)
 
-# rclcpp_components_register_node(${PROJECT_NAME}
-#   PLUGIN "armor_auto_aim::ArmorDetectorNode"
-#   EXECUTABLE ${PROJECT_NAME}_node
-# )
+
+
+rclcpp_components_register_node(${PROJECT_NAME}
+  PLUGIN "armor_auto_aim::ArmorTrackerNode"
+  EXECUTABLE ${PROJECT_NAME}_node
+)
 
 
 ament_auto_package(
 INSTALL_TO_SHARE
     launch
 )
+
 
 

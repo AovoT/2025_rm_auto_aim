@@ -14,11 +14,4 @@ rclcpp_components_register_node(
   ${PROJECT_NAME} PLUGIN "armor_auto_aim::ControllerIONode" EXECUTABLE
   controller_io_node)
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE)
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
-
 ament_auto_package(INSTALL_TO_SHARE launch config)

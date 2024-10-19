@@ -2,6 +2,7 @@
 #define ARMOR_DETECT_NODE_H
 
 #include <iostream>
+#include <thread>
 
 #include <rclcpp/rclcpp.hpp>
 #include <image_transport/publisher.hpp>
@@ -19,6 +20,7 @@
 #include "armor_detect.h"
 #include "armor_classify.h"
 #include "pnpslover.h"
+#include "HKCameraNode.h"
 
 namespace armor_auto_aim {
 class ArmorDetectorNode : public rclcpp::Node {
@@ -32,9 +34,12 @@ public:
     void subImageCallback(const sensor_msgs::msg::Image::ConstSharedPtr img_msg);
 
     void updateThresold();
+    
+    void startDetect();
 
     rcl_interfaces::msg::SetParametersResult paramChangedCallback(const std::vector<rclcpp::Parameter> &parameters);
 public:
+    std::thread m_detect_core;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr m_param_callback_handle_; // 处理参数回调
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr m_parameter_event_handler;
     //功能
@@ -46,8 +51,9 @@ public:
     ClassifyInfo m_classify_info;
     armor_interfaces::msg::Armors m_armors;
     // 订阅
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr m_img_sub;
-    rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr m_cam_info_sub;
+    
+    // rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr m_img_sub;
+    // rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr m_cam_info_sub;
     // 推送
     image_transport::Publisher m_result_img_pub;
     rclcpp::Publisher<armor_interfaces::msg::Armors>::SharedPtr m_armors_publish;

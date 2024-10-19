@@ -14,7 +14,6 @@ cv::Mat ArmorDetect::preprocessImage(const cv::Mat &image) {
         cv::threshold(processed_image, processed_image, m_all_thresold.gray_thresold, 255, 0);
         cv::Mat kernel = cv::getStructuringElement(2, cv::Size(3, 3));
         cv::morphologyEx(processed_image, processed_image ,1,kernel,cv::Point(-1,-1),m_all_thresold.morphologyex_times);
-
     }
     if (m_all_thresold.process_way == "rgb") {
         cv::Mat gray_image, rgb_image;
@@ -67,7 +66,6 @@ std::vector<Light> ArmorDetect::getRelLights(cv::Mat const & processed_image) {
         } else if (cv::contourArea(contour) > m_all_thresold.max_light_area) {
             continue;
         }
-        
         auto rotated_rect = cv::fitEllipse(contour);
         Light demo_light = processLight(rotated_rect);
 
@@ -100,11 +98,8 @@ void ArmorDetect::matchRelArmor(const std::vector<Light> &lights) {
                 m_armors.push_back(demo_armor);
             }
         }
-        
-
     }
 }
-
 
 bool ArmorDetect::judgeIfRelLight(const Light &demo_light) {
     return demo_light.angle < m_all_thresold.max_light_angle &&
@@ -117,7 +112,6 @@ bool ArmorDetect::judgeIfRelArmor(const Armor &armor) {
            armor.lenght_width_ratio > m_all_thresold.min_armor_lenght_width_ratio &&
            armor.left_light.area / armor.right_light.area < m_all_thresold.max_armor_light_area_ratio &&
            armor.left_light.area / armor.right_light.area > m_all_thresold.min_armor_light_area_ratio;
-
 }
 
 void ArmorDetect::updateAllThresold(const AllThresold &all_thresold) {
@@ -128,11 +122,11 @@ Light ArmorDetect::processLight(const cv::RotatedRect &rotated_rect) {
     Light light;
     light.center = rotated_rect.center;
     if (rotated_rect.angle>90) {
-        light.angle = rotated_rect.angle-180;
+        light.angle = rotated_rect.angle - 180;
     } else {
         light.angle = rotated_rect.angle;
     }
-    std::vector<cv::Point2f> points;
+    std::vector<cv::Point2f> points(4);
     rotated_rect.points(points.data());    
     light.length = std::min(rotated_rect.size.height,rotated_rect.size.width);
     light.width = std::max(rotated_rect.size.height,rotated_rect.size.width);
@@ -146,8 +140,8 @@ Light ArmorDetect::processLight(const cv::RotatedRect &rotated_rect) {
             }
         }
     }
-    light.points.push_back(cv::Point2f((points[2] + points[3])) / 2);
-    light.points.push_back(cv::Point2f((points[0] + points[3]) / 2));
+    light.points.push_back(cv::Point2f((points[2] + points[3]) / 2));
+    light.points.push_back(cv::Point2f((points[0] + points[1]) / 2));
     light.area = rotated_rect.size.area();
     return light;
 }
@@ -191,8 +185,6 @@ void ArmorDetect::drawArmor(const cv::Mat &image) {
         cv::circle(drawed_image, armor.center, 10, cv::Scalar(0, 0, 255), 1, 8 , 0);
         cv::circle(drawed_image, armor.left_light.center, 10, cv::Scalar(0, 0, 255), 1, 8 , 0);
         cv::circle(drawed_image, armor.right_light.center, 10, cv::Scalar(0, 0, 255), 1, 8 , 0);
-
-
     }
     // cropArmorNumber(image);
     cv::imshow("drawed_armor_image", drawed_image);
