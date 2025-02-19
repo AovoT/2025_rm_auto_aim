@@ -65,7 +65,7 @@ struct Light {
 };
 
 struct Armor {
-    bool ifsmall;
+    bool ifsmall = true;
     Light left_light;
     Light right_light;
     int number_class;

@@ -14,7 +14,6 @@ cv::Mat ArmorDetect::preprocessImage(const cv::Mat &image) {
         cv::threshold(processed_image, processed_image, m_all_thresold.gray_thresold, 255, 0);
         cv::Mat kernel = cv::getStructuringElement(2, cv::Size(3, 3));
         cv::morphologyEx(processed_image, processed_image ,1,kernel,cv::Point(-1,-1),m_all_thresold.morphologyex_times);
-
     }
     if (m_all_thresold.process_way == "rgb") {
         cv::Mat gray_image, rgb_image;
@@ -67,7 +66,6 @@ std::vector<Light> ArmorDetect::getRelLights(cv::Mat const & processed_image) {
         } else if (cv::contourArea(contour) > m_all_thresold.max_light_area) {
             continue;
         }
-        
         auto rotated_rect = cv::fitEllipse(contour);
         Light demo_light = processLight(rotated_rect);
 
@@ -92,7 +90,6 @@ std::vector<Light> ArmorDetect::getRelLights(cv::Mat const & processed_image) {
 }
 
 void ArmorDetect::matchRelArmor(const std::vector<Light> &lights) {
-    
     for (int i = 0; i < lights.size(); i++) {
         for (int j = i+1; j < lights.size(); j++) {
             Armor demo_armor = processArmor(lights[i], lights[j]);
@@ -100,11 +97,8 @@ void ArmorDetect::matchRelArmor(const std::vector<Light> &lights) {
                 m_armors.push_back(demo_armor);
             }
         }
-        
-
     }
 }
-
 
 bool ArmorDetect::judgeIfRelLight(const Light &demo_light) {
     return demo_light.angle < m_all_thresold.max_light_angle &&
@@ -116,7 +110,9 @@ bool ArmorDetect::judgeIfRelArmor(const Armor &armor) {
     return armor.lenght_width_ratio < m_all_thresold.max_armor_lenght_width_ratio &&
            armor.lenght_width_ratio > m_all_thresold.min_armor_lenght_width_ratio &&
            armor.left_light.area / armor.right_light.area < m_all_thresold.max_armor_light_area_ratio &&
-           armor.left_light.area / armor.right_light.area > m_all_thresold.min_armor_light_area_ratio;
+           armor.left_light.area / armor.right_light.area > m_all_thresold.min_armor_light_area_ratio &&
+           armor.area < m_all_thresold.max_armor_area &&
+           armor.area > m_all_thresold.min_armor_area;
 
 }
 
@@ -128,12 +124,12 @@ Light ArmorDetect::processLight(const cv::RotatedRect &rotated_rect) {
     Light light;
     light.center = rotated_rect.center;
     if (rotated_rect.angle>90) {
-        light.angle = rotated_rect.angle-180;
+        light.angle = rotated_rect.angle - 180;
     } else {
         light.angle = rotated_rect.angle;
     }
-    std::vector<cv::Point2f> points;
-    rotated_rect.points(points);    
+    std::vector<cv::Point2f> points(4);
+    rotated_rect.points(points.data());    
     light.length = std::min(rotated_rect.size.height,rotated_rect.size.width);
     light.width = std::max(rotated_rect.size.height,rotated_rect.size.width);
     light.lenght_width_ratio = light.length / light.width;
@@ -146,8 +142,8 @@ Light ArmorDetect::processLight(const cv::RotatedRect &rotated_rect) {
             }
         }
     }
-    light.points.push_back(cv::Point2f((points[2] + points[3])) / 2);
-    light.points.push_back(cv::Point2f((points[0] + points[3]) / 2));
+    light.points.push_back(cv::Point2f((points[0] + points[1]) / 2));
+    light.points.push_back(cv::Point2f((points[2] + points[3]) / 2));
     light.area = rotated_rect.size.area();
     return light;
 }
@@ -182,19 +178,45 @@ void ArmorDetect::startDetect(const cv::Mat &image) {
 }
 
 void ArmorDetect::drawArmor(const cv::Mat &image) {
-    cv::Mat drawed_image = image;
-    for (auto const &armor : m_armors) {
+    cv::Mat drawed_image = image.clone();  // 深拷贝图像，以免修改原图像
+    for (const auto &armor : m_armors) {
+        // 画出装甲板的边框
         cv::line(drawed_image, armor.points[0], armor.points[1], cv::Scalar(0, 0, 255), 2);
         cv::line(drawed_image, armor.points[1], armor.points[2], cv::Scalar(0, 0, 255), 2);
         cv::line(drawed_image, armor.points[2], armor.points[3], cv::Scalar(0, 0, 255), 2);
         cv::line(drawed_image, armor.points[3], armor.points[0], cv::Scalar(0, 0, 255), 2);
-        cv::circle(drawed_image, armor.center, 10, cv::Scalar(0, 0, 255), 1, 8 , 0);
-        cv::circle(drawed_image, armor.left_light.center, 10, cv::Scalar(0, 0, 255), 1, 8 , 0);
-        cv::circle(drawed_image, armor.right_light.center, 10, cv::Scalar(0, 0, 255), 1, 8 , 0);
 
+        // 标记每个角点的编号，增加不同的偏移量
+        for (size_t i = 0; i < armor.points.size(); ++i) {
+            cv::circle(drawed_image, armor.points[i], 5, cv::Scalar(0, 255, 0), -1); // 画点
 
+            // 根据点的位置偏移文字，避免重叠
+            cv::Point2f offset;
+            switch (i) {
+                case 0: offset = cv::Point2f(-15, -10); break; // 左上
+                case 1: offset = cv::Point2f(-15, 15); break;  // 左下
+                case 2: offset = cv::Point2f(10, 15); break;   // 右下
+                case 3: offset = cv::Point2f(10, -10); break;  // 右上
+            }
+            cv::putText(drawed_image, std::to_string(i), armor.points[i] + offset,
+                        cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1);  // 标记编号
+        }
+
+        // 标记中心点和左右灯条
+        cv::circle(drawed_image, armor.center, 10, cv::Scalar(0, 255, 255), 1, 8, 0);
+        cv::putText(drawed_image, "Center", armor.center + cv::Point2f(-10, 10),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1);
+
+        cv::circle(drawed_image, armor.left_light.center, 10, cv::Scalar(255, 255, 0), 1, 8, 0);
+        cv::putText(drawed_image, "Left", armor.left_light.center + cv::Point2f(-10, 10),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1);
+
+        cv::circle(drawed_image, armor.right_light.center, 10, cv::Scalar(255, 255, 0), 1, 8, 0);
+        cv::putText(drawed_image, "Right", armor.right_light.center + cv::Point2f(-10, 10),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 1);
     }
-    // cropArmorNumber(image);
+
+    // 显示图像
     cv::imshow("drawed_armor_image", drawed_image);
     cv::waitKey(1);
 }

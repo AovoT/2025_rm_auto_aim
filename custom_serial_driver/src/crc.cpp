@@ -1,10 +1,11 @@
 /**
+ *
  * @file CRC.cpp
  * @author yao
  * @date 2021年1月13日
  */
 
-#include <custom_serial_driver/crc.h>
+#include <crc.h>
 
 namespace custom_serial {
 static const uint8_t CRC8_INIT = 0xff;

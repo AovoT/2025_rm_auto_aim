@@ -10,10 +10,12 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
+  <depend>hik_camera</depend>
   <depend>rclcpp_components</depend>
   <depend>rclcpp_interfaces</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>angles</depend>
   <depend>visualization_msgs</depend>
   <depend>message_filters</depend>
   <depend>cv_bridge</depend>

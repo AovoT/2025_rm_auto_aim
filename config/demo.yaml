@@ -1,0 +1,12 @@
+transform:
+#哨兵
+  translation: [-0.4,0.00, -0.05]
+  # translation: [0.1,0.00, 0.00]
+  rotation: [-90.0, 00.00, -180.00] 
+kalman:
+  yaw_v: 0
+  yaw_th_l: 0.8
+  yaw_th_r: 2.2
+
+type: Sentry
+

@@ -1,4 +1,4 @@
-detect_color: BLUE
+detect_color: RED
 gray_thresold: 163
 h_lower: 3
 h_up: 0
@@ -14,7 +14,7 @@ min_armor_light_area_ratio: 0.4
 min_light_area: 50
 min_light_lenght_width_ratio: 0.01
 morphologyex_times: 3
-process_way: rgb
+process_way: gray
 qos_overrides./parameter_events.publisher.depth: 1000
 qos_overrides./parameter_events.publisher.durability: volatile
 qos_overrides./parameter_events.publisher.history: keep_last
