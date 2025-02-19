@@ -2,7 +2,9 @@
 #define KALMAN_FILTER_H
 
 #include <iostream>
+#include <eigen3/Eigen/Eigen>
 #include <eigen3/Eigen/Core>
+
 
 namespace armor_auto_aim {
 class ExtendedKalmanFilter {
@@ -16,9 +18,9 @@ public:
                         const GetMatrixVoidInputFunction update_Q, const GetMatrixFunction update_R, double dt);
     void updateDt(double dt) {m_dt = dt;}
 
-    Eigen::VectorXd predict(const Eigen::VectorXd& measurement_vector);
+    Eigen::VectorXd update(const Eigen::VectorXd& measurement_vector);
 
-    Eigen::VectorXd update();
+    Eigen::VectorXd predict();
 
     void setState(const Eigen::VectorXd& x0) { m_state_pos = x0; }
 private:

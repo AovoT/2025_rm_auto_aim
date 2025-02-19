@@ -15,6 +15,7 @@
   <depend>rclcpp_interfaces</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>angles</depend>
   <depend>visualization_msgs</depend>
   <depend>message_filters</depend>
   <depend>cv_bridge</depend>

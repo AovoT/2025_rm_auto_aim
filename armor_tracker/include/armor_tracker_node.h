@@ -7,6 +7,7 @@
 #include <fstream>
 
 #include <eigen3/Eigen/Core>
+#include <opencv2/opencv.hpp>
 
 // ROS2
 #include <rclcpp/rclcpp.hpp>
@@ -19,6 +20,9 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <std_msgs/msg/float64.hpp>
 #include <std_srvs/srv/set_bool.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <cv_bridge/cv_bridge.h>
+#include <geometry_msgs/msg/point32.hpp>
 
 #include <armor_interfaces/msg/armor.hpp>
 #include <armor_interfaces/msg/armors.hpp>
@@ -26,6 +30,7 @@
 
 #include "kalman_filter.h"
 #include "tracker.h"
+#include "HKCameraNode.h"
 
 namespace armor_auto_aim {
 class ArmorTrackerNode : public rclcpp::Node {
@@ -35,6 +40,7 @@ public:
     void subArmorsCallback(const armor_interfaces::msg::Armors::SharedPtr armors_msg);
     void initExtentedKalman();
     void initTracker();
+    cv::Point2d project3dTo2d(const cv::Point3d& pt_3d);
 private:
     std::string m_odom_frame;
     rclcpp::Time m_last_stamp;
@@ -48,8 +54,15 @@ private:
     Tracker m_tracker;
     std::shared_ptr<tf2_ros::Buffer> m_tf_buffer;
     tf2_ros::StaticTransformBroadcaster m_static_broadcaster;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr m_marker_pub;
+    HKCameraNode::CameraInfo m_camera_info;
+    std::ofstream m_output_file;
+    int all_time = 1;
+    int rel_time = 1;
+    double m_yaw_v;
+    double m_yaw_th_l;
+    double m_yaw_th_r;
 
-    
 };
 } // namespace armor_auto_aim
 #endif // ARMOR_TRACKER_NODE_

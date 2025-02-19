@@ -19,6 +19,7 @@ struct AutoAimPacket {
     uint8_t id;
     uint8_t delay;
     uint8_t is_tracking;
+
 };
 } // armor_auto_aim
 

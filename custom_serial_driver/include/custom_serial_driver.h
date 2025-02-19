@@ -12,6 +12,8 @@
 #include <custom_serial_interfaces/msg/receive.hpp>
 #include <custom_serial_interfaces/srv/send_package.hpp>
 
+// #include "../../controller_io/include/auto_aim_package.h"
+
 namespace custom_serial {
 class SerialDriverNode : public rclcpp::Node {
   static constexpr int BUFF_LEN = 64;

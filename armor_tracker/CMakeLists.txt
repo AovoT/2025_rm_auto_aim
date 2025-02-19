@@ -32,6 +32,7 @@ target_link_libraries(${PROJECT_NAME}
     ${OpenCV_LIBS}
     ${OpenVINO_LIBRARIES}
     ${armor_interfaces_LIBRARIES}
+    Eigen3::Eigen
     yaml-cpp)
 
 

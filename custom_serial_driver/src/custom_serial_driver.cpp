@@ -119,6 +119,7 @@ void SerialDriverNode::reopen() {
   }
 }
 
+
 void SerialDriverNode::receiveData() {
   std::vector<uint8_t> buff(BUFF_LEN);
   uint8_t *pbuff;
@@ -171,6 +172,39 @@ void SerialDriverNode::receiveData() {
   }
 }
 
+// void SerialDriverNode::sendData(uint8_t func_code, uint16_t id, uint16_t len,
+//                                 const uint8_t *data) {
+//   std::vector<uint8_t> buff(len + 8);
+//   uint8_t *pbuff = buff.data();
+
+//   *(reinterpret_cast<uint8_t *>(pbuff)) = 0x5A;
+//   *(reinterpret_cast<uint8_t *>(pbuff + 1)) = func_code;
+//   *(reinterpret_cast<uint16_t *>(pbuff + 2)) = id;
+//   *(reinterpret_cast<uint16_t *>(pbuff + 4)) = len;
+//   std::memcpy(pbuff + 6, data, len);
+//   auto crc =
+//       custom_serial::Verify_CRC16_Check_Sum(const_cast<uint8_t *>(data), len);
+//   *(reinterpret_cast<uint16_t *>(pbuff + 6 + len)) = crc;
+
+//   try {
+//     m_driver->port()->send(buff);
+//   } catch (const std::exception &e) {
+//     RCLCPP_ERROR(this->get_logger(), "serial port send failed!");
+//     reopen();
+//   }
+// }
+
+struct AutoAimPacket {
+    float x, y, z,
+          v_x, v_y, v_z,
+          theta, omega,
+          r1, r2, dz;
+    uint8_t num;
+    uint8_t id;
+    uint8_t delay;
+    uint8_t is_tracking;
+
+};
 void SerialDriverNode::sendData(uint8_t func_code, uint16_t id, uint16_t len,
                                 const uint8_t *data) {
   std::vector<uint8_t> buff(len + 8);
@@ -185,6 +219,42 @@ void SerialDriverNode::sendData(uint8_t func_code, uint16_t id, uint16_t len,
       custom_serial::Verify_CRC16_Check_Sum(const_cast<uint8_t *>(data), len);
   *(reinterpret_cast<uint16_t *>(pbuff + 6 + len)) = crc;
 
+  // 打印发送的数据内容
+  std::cout << "======================Send Data======================" << std::endl;
+  std::cout << "Func Code  : " << static_cast<int>(func_code) << std::endl;
+  std::cout << "ID         : " << id << std::endl;
+  std::cout << "Length     : " << len << std::endl;
+  std::cout << "Raw Data   : ";
+  for (size_t i = 0; i < len; ++i) {
+    std::cout << std::hex << static_cast<int>(data[i]) << " ";
+  }
+  std::cout << std::dec << std::endl;
+
+  // 解析并打印 AutoAimPacket
+  if (len == sizeof(AutoAimPacket)) {
+    AutoAimPacket packet;
+    std::memcpy(&packet, data, sizeof(AutoAimPacket));
+    std::cout << "======================AutoAimPacket======================" << std::endl;
+    std::cout << "x          : " << packet.x << std::endl;
+    std::cout << "y          : " << packet.y << std::endl;
+    std::cout << "z          : " << packet.z << std::endl;
+    std::cout << "v_x        : " << packet.v_x << std::endl;
+    std::cout << "v_y        : " << packet.v_y << std::endl;
+    std::cout << "v_z        : " << packet.v_z << std::endl;
+    std::cout << "theta      : " << packet.theta << std::endl;
+    std::cout << "omega      : " << packet.omega << std::endl;
+    std::cout << "r1         : " << packet.r1 << std::endl;
+    std::cout << "r2         : " << packet.r2 << std::endl;
+    std::cout << "dz         : " << packet.dz << std::endl;
+    std::cout << "num        : " << static_cast<int>(packet.num) << std::endl;
+    std::cout << "id         : " << static_cast<int>(packet.id) << std::endl;
+    std::cout << "delay      : " << static_cast<int>(packet.delay) << std::endl;
+    std::cout << "is_tracking: " << static_cast<int>(packet.is_tracking) << std::endl;
+  } else {
+    std::cout << "Data length does not match AutoAimPacket size!" << std::endl;
+  }
+
+  // 发送数据
   try {
     m_driver->port()->send(buff);
   } catch (const std::exception &e) {
@@ -192,6 +262,7 @@ void SerialDriverNode::sendData(uint8_t func_code, uint16_t id, uint16_t len,
     reopen();
   }
 }
+
 } // namespace custom_serial
 
 #include <rclcpp_components/register_node_macro.hpp>

@@ -26,8 +26,8 @@ namespace armor_auto_aim {
 class ControllerIONode : public rclcpp::Node {
 enum FunId {
     PCId = 0,
-    TimestampPackte,
-    AimPacket
+    TimestampPackte = 0,
+    AimPacket= 1
 };
 enum DecisonId {
     ControllerId = 10,

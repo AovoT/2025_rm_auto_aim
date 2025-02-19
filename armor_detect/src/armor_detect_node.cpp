@@ -15,6 +15,7 @@
 #include <fmt/format.h>
 // ROS2
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <sensor_msgs/msg/image.hpp>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -26,7 +27,16 @@ namespace armor_auto_aim {
     ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions &options) : Node("armor_detector", options) {
         RCLCPP_INFO(this->get_logger(), "ArmorDetectorNode Constructor");
         declareParams();
-        HKCameraNode::CameraInfo camera_info = HKCameraNode::getInstance().getCameraInfo("/home/myq/Desktop/my_code/auto_aim/2025_rm_auto_aim/config/old.yaml");
+
+
+        std::filesystem::path filePath = std::filesystem::path(__FILE__).parent_path();
+        std::filesystem::path autoAimConfigPath = (filePath / "../../config/demo.yaml").lexically_normal();
+        YAML::Node config = YAML::LoadFile(autoAimConfigPath.string());
+        std::string type = config["type"].as<std::string>();
+        std::string lastPath = "../../config/" + type + ".yaml";
+        std::filesystem::path cameraConfigPath = (filePath / lastPath).lexically_normal();
+        HKCameraNode::CameraInfo camera_info = HKCameraNode::getInstance().getCameraInfo(cameraConfigPath.string());
+        // HKCameraNode::CameraInfo camera_info = HKCameraNode::getInstance().getCameraInfo("/home/myq/Desktop/my_code/auto_aim_armor/2025_rm_auto_aim/config/Sentry.yaml");
         if (!(camera_info.distortion_vector.empty() && camera_info.intrinsic_matrix.empty())) {
             m_armor_pnp_slover = ArmorPnpSlover(camera_info.intrinsic_matrix, camera_info.distortion_vector);
             RCLCPP_INFO(this->get_logger(), "pnp init successfully");
@@ -50,6 +60,7 @@ namespace armor_auto_aim {
             auto start = std::chrono::high_resolution_clock::now();
             updateThresold();
             cv::Mat img = HKCameraNode::getInstance().getImage();
+            cv::Mat pub_image = img.clone();
             m_armors.armors.clear();
             m_armors.header.frame_id = "camera_frame";
             m_armors.header.stamp = this->now();
@@ -73,47 +84,67 @@ namespace armor_auto_aim {
                 cv::Mat r_vec, t_vec;
                 armor.ifsmall = true;
                 if (m_armor_pnp_slover.pnpSlove(armor, r_vec, t_vec)) {
+                    float axis_length = 0.05f; // 5 厘米
+                    std::vector<cv::Point3f> axisPoints;
+                    // axisPoints.push_back(cv::Point3f(0, 0, 0)); // 原点
+                    // axisPoints.push_back(cv::Point3f(-axis_length, 0, 0)); // X 轴朝远离相机
+                    // axisPoints.push_back(cv::Point3f(0, axis_length, 0)); // Y 轴向右
+                    // axisPoints.push_back(cv::Point3f(0, 0, axis_length)); // Z 轴向上
+
+                    axisPoints.push_back(cv::Point3f(0, 0, 0)); // 原点
+                    axisPoints.push_back(cv::Point3f(axis_length, 0, 0)); // X 轴朝远离相机
+                    axisPoints.push_back(cv::Point3f(0, axis_length, 0)); // Y 轴向右
+                    axisPoints.push_back(cv::Point3f(0, 0, axis_length)); // Z 轴向上
+                    std::vector<cv::Point2f> imagePoints;
+                    cv::Mat camera_matrix = m_armor_pnp_slover.getCameraMatrix();
+                    cv::Mat dist_coeffs = m_armor_pnp_slover.getDistortionVector();
+                    cv::projectPoints(axisPoints, r_vec, t_vec, camera_matrix, dist_coeffs, imagePoints);
+                    cv::Point2f origin = imagePoints[0];
+                    cv::Point2f xAxisEnd = imagePoints[1];
+                    cv::Point2f yAxisEnd = imagePoints[2];
+                    cv::Point2f zAxisEnd = imagePoints[3];
+                    // 绘制 X 轴（红色）
+                    cv::arrowedLine(img, origin, xAxisEnd, cv::Scalar(0, 0, 255), 2);
+                    cv::putText(img, "X", xAxisEnd, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
+                    // 绘制 Y 轴（绿色）
+                    cv::arrowedLine(img, origin, yAxisEnd, cv::Scalar(0, 255, 0), 2);
+                    cv::putText(img, "Y", yAxisEnd, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+                    // 绘制 Z 轴（蓝色）
+                    cv::arrowedLine(img, origin, zAxisEnd, cv::Scalar(255, 0, 0), 2);
+                    cv::putText(img, "Z", zAxisEnd, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 2);
                     armor_msg.type = "SMALL";
                     armor_msg.color = this->get_parameter("detect_color").as_string();
-                    armor_msg.number = armor.number_class;
+                    armor_msg.number = 2;
                     armor_msg.distance_to_center = m_armor_pnp_slover.computeArmorToCenter(armor.center);
                     armor_msg.pose.position.x = t_vec.at<double>(0); 
                     armor_msg.pose.position.y = t_vec.at<double>(1); 
                     armor_msg.pose.position.z = t_vec.at<double>(2); 
-                    for (int i = 0; i < t_vec.rows; ++i) {
-                        for (int j = 0; j < t_vec.cols; ++j) {
-                            std::cout << t_vec.ptr<double>(i)[j] << std::endl;
-                        }
-                    }
-
-                    if (!t_vec.empty()) {
+                    if (!t_vec.empty() && !r_vec.empty()) {
                         std::cout << "distance" << armor_msg.distance_to_center << "x :" << t_vec.at<double>(0)  << " y :" << t_vec.at<double>(1) <<  " z :"<<  t_vec.at<double>(2) << std::endl;
                     }
                     armor_msg.pose.orientation = m_armor_pnp_slover.orientationFromRvec(r_vec);
                     m_armors.armors.push_back(armor_msg);
+                    sensor_msgs::msg::Image::SharedPtr msg_image = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", pub_image).toImageMsg();
+                    m_armors.image = *msg_image;
                 }
             }
             m_armors_publish->publish(m_armors);
             // 记录帧处理结束的时间
             auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> frame_time = end - start;
-
             // 计算帧率
+            std::chrono::duration<double> frame_time = end - start;
             double fps = 1.0 / frame_time.count();
-            
-            // 将帧率转换为字符串
             std::string fps_text = "FPS: " + std::to_string(static_cast<int>(fps));
-
-            // 将FPS绘制到图像上
             cv::putText(img, fps_text, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 0, 0), 2);
-
+            // cv::circle(img, cv::Point(360, 270), 10, cv::Scalar(0, 255, 0), -1); // 蓝色圆点
+            // cv::line(img, cv::Point(0, 270), cv::Point(720, 270),cv::Scalar(0, 0, 255), 1, cv::LINE_8, 0); // 蓝色圆点
+            // cv::line(img, cv::Point(360, 0), cv::Point(360 540),cv::Scalar(0, 0, 255), 1, cv::LINE_8, 0); // 蓝色圆点
             // 显示图像
+
             cv::imshow("receive_image", img);
             cv::waitKey(1); // 添加延时，以便显示图像
         }
-
     }
-
     void ArmorDetectorNode::declareParams() {
         rcl_interfaces::msg::ParameterDescriptor desc;
         desc.description = "Parameter range";
@@ -143,18 +174,18 @@ namespace armor_auto_aim {
         m_declare_all_thresold.morphologyex_times = this->declare_parameter("morphologyex_times", 3);
         
         // 筛选灯条阈值
-        m_declare_all_thresold.max_light_angle = this->declare_parameter("max_light_angle", 30);
-        m_declare_all_thresold.max_light_lenght_width_ratio = this->declare_parameter<double>("max_light_lenght_width_ratio", 0.5);
+        m_declare_all_thresold.max_light_angle = this->declare_parameter("max_light_angle", 80);
+        m_declare_all_thresold.max_light_lenght_width_ratio = this->declare_parameter<double>("max_light_lenght_width_ratio", 0.9);
         m_declare_all_thresold.min_light_lenght_width_ratio = this->declare_parameter<double>("min_light_lenght_width_ratio", 0.01);
         m_declare_all_thresold.min_light_area = this->declare_parameter("min_light_area", 200);
         m_declare_all_thresold.max_light_area = this->declare_parameter("max_light_area", 50000);
         // 筛选装甲板的阈值
-        m_declare_all_thresold.min_armor_light_area_ratio = this->declare_parameter<double>("min_armor_light_area_ratio", 0.6);
+        m_declare_all_thresold.min_armor_light_area_ratio = this->declare_parameter<double>("min_armor_light_area_ratio", 0.2);
         m_declare_all_thresold.max_armor_light_area_ratio = this->declare_parameter<double>("max_armor_light_area_ratio", 2);
-        m_declare_all_thresold.min_armor_area = this->declare_parameter("min_armor_area", 100);
+        m_declare_all_thresold.min_armor_area = this->declare_parameter("min_armor_area", 2000);
         m_declare_all_thresold.max_armor_area = this->declare_parameter("max_armor_area", 10000);
-        m_declare_all_thresold.max_armor_lenght_width_ratio = this->declare_parameter<double>("max_armor_lenght_width_ratio", 2.5);
-        m_declare_all_thresold.min_armor_lenght_width_ratio = this->declare_parameter<double>("min_armor_lenght_width_ratio", 0.4);
+        m_declare_all_thresold.max_armor_lenght_width_ratio = this->declare_parameter<double>("max_armor_lenght_width_ratio", 3.5);
+        m_declare_all_thresold.min_armor_lenght_width_ratio = this->declare_parameter<double>("min_armor_lenght_width_ratio", 0.2);
 
         RCLCPP_INFO(this->get_logger(), "Parameters Declared Successfully");
 

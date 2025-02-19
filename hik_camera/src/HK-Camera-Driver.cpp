@@ -106,23 +106,33 @@ void HK_Camera::cameraInit() {
         printf("Get HeightMax fail! nRet [0x%x]\n", nRet);
     }
 
+    // // 设置图像像素
+    // nRet = MV_CC_SetIntValue(handle, "Width", nWidthMaxValue.nCurValue);
+    // if (MV_OK != nRet) {
+    //     printf("error: Set Img Width fail [%x]\n", nRet);
+    // }
+    // nRet = MV_CC_SetIntValue(handle, "Height", nHeightMaxValue.nCurValue);
+    // if (MV_OK != nRet) {
+    //     printf("error: Set Img Height fail [%x]\n", nRet);
+    // }
+
     // 设置图像像素
-    nRet = MV_CC_SetIntValue(handle, "Width", nWidthMaxValue.nCurValue);
+    nRet = MV_CC_SetIntValue(handle, "Width", 720);
     if (MV_OK != nRet) {
         printf("error: Set Img Width fail [%x]\n", nRet);
     }
-    nRet = MV_CC_SetIntValue(handle, "Height", nHeightMaxValue.nCurValue);
+    nRet = MV_CC_SetIntValue(handle, "Height", 540);
     if (MV_OK != nRet) {
         printf("error: Set Img Height fail [%x]\n", nRet);
     }
 
     //帧率控制使能，true表示打开，false标识关闭
-    nRet = MV_CC_SetBoolValue(handle, "AcquisitionFrameRateEnable", true);
+    nRet = MV_CC_SetBoolValue(handle, "AcquisitionFrameRateEnable", false);
     if (nRet != MV_OK) {
         printf("Warning: Set AcquisitionBurstFrameCountfail nRet [0x%x]!\n", nRet);
     }
     //设置相机帧率，需注意不要超过相机支持的最大的帧率（相机规格书），超过了也没有意义（需要注意的是不同的像素类型支持的帧率也不同）
-    nRet = MV_CC_SetFloatValue(handle, "AcquisitionFrameRate", 25);
+    nRet = MV_CC_SetFloatValue(handle, "AcquisitionFrameRate", 200);
     if (nRet != MV_OK) {
         printf("Warning: Set AcquisitionBurstFrameCountfail nRet [0x%x]!\n", nRet);
     }
@@ -130,7 +140,7 @@ void HK_Camera::cameraInit() {
 
     //设置手动曝光，设置曝光时间
     nRet = MV_CC_SetEnumValue(handle, "ExposureMode",0);
-    nRet = MV_CC_SetFloatValue(handle, "ExposureTime", 10000);
+    nRet = MV_CC_SetFloatValue(handle, "ExposureTime", 2000);
     if (MV_OK != nRet) {
         printf("Set ExposureTime fail nRet [0x%x]!\n", nRet);
     }

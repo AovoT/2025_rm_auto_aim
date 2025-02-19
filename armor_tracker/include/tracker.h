@@ -14,7 +14,26 @@
 #include <armor_interfaces/msg/target.hpp>
 
 namespace armor_auto_aim {
+struct Armor {
+    struct Pose {
+        float x;
+        float y;
+        float z;
+    };
+    Pose pose;
+    float yaw;
+};
+
+struct AngleInfo {
+    double yaw = 0 ;
+    double pitch = 0;
+    double roll = 0;
+    double yaw_angle = 0 ;
+    double pitch_angle = 0;
+    double roll_angle = 0;
+};
 class Tracker;
+
 
 class TrackerStateMachine {
 public:
@@ -27,7 +46,10 @@ public:
 
     TrackerStateMachine() =default;
 
-    inline void initState() { m_state = State::Detecting; }
+    inline void initState() { 
+        std::cout << "init state" << std::endl;
+        m_state = State::Detecting;
+         }
 
     [[nodiscard]] inline State state() const { return m_state; };
 
@@ -42,9 +64,8 @@ private:
     State m_state = State::Lost;
     int m_detect_count = 0;
     int m_lost_count = 0;
-    int m_tracking_threshold = 5;
-    int m_lost_threshold = 30;
-
+    int m_tracking_threshold = 0;
+    int m_lost_threshold = 0;
     std::map<State, std::string> m_state_map {
             { State::Lost, "Lost" },
             { State::Detecting, "Detecting" },
@@ -55,8 +76,12 @@ private:
 
 class Tracker {
 public:
+    Armor getLeftArmor() {return m_left_armor;}
+    Armor getRightArmor() {return m_right_armor;}
     Tracker() =default;
 
+    Armor computeOtherArmor(const Eigen::Vector3d& center, double radius, double base_yaw, double angle_offset);
+    Eigen::Vector3d computeRotationCenter(const Armor& armor, double radius);
     void initTracker(const armor_interfaces::msg::Armors::SharedPtr armors_msg);
 
     void updateTracker(const armor_interfaces::msg::Armors::SharedPtr armors_msg);
@@ -66,13 +91,14 @@ public:
     [[nodiscard]] inline std::string stateString() const { return m_tracker_state_machine.stateString(); }
 
     inline bool isTracking() const {
-        return m_tracker_state_machine.state() == TrackerStateMachine::State::Tracking ||
-               m_tracker_state_machine.state() == TrackerStateMachine::State::TempLost;
+        return m_tracker_state_machine.state() == TrackerStateMachine::State::Tracking;
     }
 
     double getLastYaw() const { return m_last_yaw; }
 
     int getNum() const { return m_armor_num; }
+
+
 
     void setMatchDistance(double v) { m_max_match_distance = v; }
 
@@ -94,7 +120,12 @@ private:
     Eigen::VectorXd m_target_predict_state;
     TrackerStateMachine m_tracker_state_machine;
     int m_tracked_id{};  // armor number
-    double m_last_yaw = .0;
+    double m_last_yaw = 0.0;
+    double m_last_pitch = 0.0;
+    Armor m_left_armor;
+    Armor m_right_armor;   double m_last_roll = 0.0;
+
+
     int m_armor_num = 0;
     // complex pattern
     bool m_is_complex_pattern = false;
@@ -107,6 +138,7 @@ private:
     void updateArmorNum(const armor_interfaces::msg::Armor& armor);
 
     double orientationToYaw(const geometry_msgs::msg::Quaternion& q);
+    AngleInfo orientationToAngle(const geometry_msgs::msg::Quaternion& q);
 
     Eigen::Vector3d getArmorPositionFromState(const Eigen::VectorXd& x);
 
